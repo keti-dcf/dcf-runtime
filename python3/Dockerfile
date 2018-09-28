@@ -1,54 +1,34 @@
 # Argruments from FROM
 ARG REGISTRY
-ARG VERSION=3.4
+ARG PYTHON_VERSION=3.4
+ARG WATCHER_VERSION=0.1.0
 
-# Get fxwatcher
-FROM ${REGISTRY}/fxwatcher:latest as watcher
+# Get watcher - if watcher is uploaded on github, remove this line.
+FROM ${REGISTRY}/watcher:${WATCHER_VERSION}-python2 as watcher
 
 # Function Environment Prepare
-FROM python:${VERSION}-alpine
-
-# Allows you to add additional packages via build-arg
+FROM python:${PYTHON_VERSION}-alpine
 ARG ADDITIONAL_PACKAGE
+RUN apk --no-cache add curl alpine-sdk python-dev ${ADDITIONAL_PACKAGE} && \
+    apk del curl --no-cache
+RUN pip install grpcio
 
-# Alternatively use ADD https:// (which will not be cached by Docker builder)
-RUN apk --no-cache add curl ${ADDITIONAL_PACKAGE} \ 
-    && apk del curl --no-cache
+ARG handler_file=handler.py
+ARG handler_name=Handler
 
-COPY --from=watcher /go/src/github.com/openfx/openfx/fxwatcher/fxwatcher .
-RUN chmod +x ./fxwatcher
+ENV HANDLER_DIR=/dcf/handler
+ENV HANDLER_FILE=${HANDLER_DIR}/${handler_file}
+ENV HANDLER_NAME=${handler_name}
 
-# Add non root user
-RUN addgroup -S app && adduser -S -g app app
+RUN mkdir -p ${HANDLER_DIR}
+WORKDIR ${HANDLER_DIR}
+COPY . .
+RUN touch ${HANDLER_DIR}/__init__.py
+RUN pip3 install -r requirements.txt
 
-WORKDIR /home/app/
-
-COPY index.py           .
-COPY requirements.txt   .
-
-RUN chown -R app /home/app
-
-USER app
-ENV PATH=$PATH:/home/app/.local/bin
-RUN pip install --user -r requirements.txt
-
-RUN mkdir -p function
-RUN touch ./function/__init__.py
-
-WORKDIR /home/app/function/
-COPY function/requirements.txt	.
-RUN pip install --user -r requirements.txt
-
-WORKDIR /home/app/
-
-USER root
-COPY function           function
-RUN chown -R app:app ./
-USER app
-
-ENV FXPROCESS="python3 index.py"
+COPY --from=watcher /dcf/watcher ${HANDLER_DIR}
 
 HEALTHCHECK --interval=1s CMD [ -e /tmp/.lock ] || exit 1
 
-CMD ["./fxwatcher"]
-
+ENTRYPOINT ["python3"]
+CMD ["server.py"]

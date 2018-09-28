@@ -8,9 +8,12 @@ FROM ${REGISTRY}/watcher:${WATCHER_VERSION}-go as watcher
 
 # Function Build & Run
 FROM golang:${GO_VERSION}
-ARG HANDLER_DIR=${GOPATH}/src/dcf/handler
+ARG handler_file
+ARG handler_name=Handler
+
+ENV HANDLER_DIR=${GOPATH}/src/dcf/handler
 ENV HANDLER_FILE=${GOPATH}/src/dcf/handler/handler
-ENV HANDLER_NAME=Handler
+ENV HANDLER_NAME=${handler_name}
 
 # Copy dcf-watcher
 RUN mkdir -p ${GOPATH}/src/github.com/keti-dcf/dcf-watcher/go
