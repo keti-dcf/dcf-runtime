@@ -7,7 +7,6 @@ ARG WATCHER_VERSION=0.1.0
 FROM ${REGISTRY}/watcher:${WATCHER_VERSION}-go as watcher
 
 # Function Build & Run
-FROM golang:${GO_VERSION}
 ARG handler_file
 ARG handler_name=Handler
 
@@ -16,9 +15,7 @@ ENV HANDLER_FILE=${GOPATH}/src/dcf/handler/handler
 ENV HANDLER_NAME=${handler_name}
 
 # Copy dcf-watcher
-RUN mkdir -p ${GOPATH}/src/github.com/keti-dcf/dcf-watcher/go
-COPY --from=watcher ${GOPATH}/src/github.com/keti-dcf/dcf-watcher ${GOPATH}/src/github.com/keti-dcf/dcf-watcher
-COPY --from=watcher ${GOPATH}/src/github.com/keti-dcf/dcf-watcher/go/dcf-watcher /dcf-watcher
+RUN cp ${GOPATH}/src/github.com/keti-dcf/dcf-watcher/go/dcf-watcher /dcf-watcher
 RUN chmod +x /dcf-watcher
 
 # Install dep
